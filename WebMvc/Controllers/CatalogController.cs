@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,14 @@ namespace WebMvc.Controllers
         public async Task<IActionResult> Index(int? page, int? brandFilterApplied, int? typesFilterApplied)
         {
             var itemsOnPage = 10;
-            var catalog = await _service.GetCatalogItemsAsync(page ?? 0, itemsOnPage, brandFilterApplied, typesFilterApplied);
+            int pagetest = 0;
+
+            if (page.HasValue == true )
+            {
+                pagetest = page.Value;
+            }
+
+            var catalog = _service.GetCatalogItemsAsync(pagetest, itemsOnPage, brandFilterApplied, typesFilterApplied).Result;
 
             var vm = new CatalogIndexViewModel
             {
@@ -36,6 +44,14 @@ namespace WebMvc.Controllers
                 TypeFilterApplied = typesFilterApplied
             };
             return View(vm);
+        }
+
+        [Authorize]
+        public IActionResult About()
+        {
+            ViewData["Message"] = "Your Application Description Page";
+
+            return View();
         }
     }
 }

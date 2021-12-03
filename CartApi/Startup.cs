@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -26,6 +28,29 @@ namespace CartApi
         {
             services.AddControllers().AddNewtonsoftJson();
             services.AddTransient<ICartRepository, RedisCartRepository>();
+            services.AddSingleton<ConnectionMultiplexer>(cm =>
+            {
+                var configuration = ConfigurationOptions.Parse(Configuration["ConnectionString"], true);
+                configuration.ResolveDns = true;
+                configuration.AbortOnConnectFail = false;
+                return ConnectionMultiplexer.Connect(configuration);
+            });
+
+            //prevent from mapping "sub" claim to nameindetifier
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+            var identityUrl = Configuration["IdentityUrl"];
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.Authority = identityUrl.ToString();
+                options.RequireHttpsMetadata = false;
+                options.Audience = "basket";
+            });
 
         }
 

@@ -49,7 +49,7 @@ namespace WebMvc.Services
         public async Task<Catalog> GetCatalogItemsAsync(int page, int size, int? brand, int? type)
         {
                 var catalogItemsUri =  ApiPaths.Catalog.GetAllCatalogItems(_baseUrl, page, size, brand, type);
-                var dataString = _client.GetStringAsync(catalogItemsUri).Result;
+                var dataString = await _client.GetStringAsync(catalogItemsUri);
                 return JsonConvert.DeserializeObject<Catalog>(dataString);
         }
 

@@ -1,5 +1,6 @@
 ﻿
 using CartApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -9,7 +10,8 @@ using System.Net;
 using System.Threading.Tasks;
 
 namespace CartApi.Controllers
-{
+{   
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CartController : ControllerBase

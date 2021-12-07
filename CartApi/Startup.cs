@@ -1,10 +1,12 @@
 using CartApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -26,8 +28,9 @@ namespace CartApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddControllers().AddNewtonsoftJson(); //Use NewtonSoft Library within aspnet core instead of MS's built-in Json library
             services.AddTransient<ICartRepository, RedisCartRepository>();
+            //Configure Redis
             services.AddSingleton<ConnectionMultiplexer>(cm =>
             {
                 var configuration = ConfigurationOptions.Parse(Configuration["ConnectionString"], true);
@@ -36,6 +39,7 @@ namespace CartApi
                 return ConnectionMultiplexer.Connect(configuration);
             });
 
+            //Integrating TokenService with cartApi
             //prevent from mapping "sub" claim to nameindetifier
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
@@ -52,6 +56,31 @@ namespace CartApi
                 options.Audience = "basket";
             });
 
+            //Integrating Swagger
+            services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "JewelsOnContainers - Basket Microservice API",
+                    Version = "v1",
+                    Description = "Basket Microservice"
+                });
+                options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows
+                    {
+                        Implicit = new OpenApiOAuthFlow
+                        {
+                            AuthorizationUrl = new Uri($"{Configuration.GetValue<string>("IdentityUrl")}/connect/authorize", UriKind.Absolute),
+                            Scopes = new Dictionary<string, string>
+                            {
+                                {"basket", "Basket Api" }
+                            }
+                        }
+                    }
+                });
+            });    
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -72,7 +101,13 @@ namespace CartApi
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseSwagger().UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "BasketAPI V1");
+            });
 
             app.UseEndpoints(endpoints =>
             {
